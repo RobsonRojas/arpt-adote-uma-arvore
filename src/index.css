@@ -1,0 +1,16 @@
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #F1F8E9;
+  font-family: 'Roboto', sans-serif;
+}
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
+@media print {
+    .no-print { display: none !important; }
+    .print-only { display: block !important; }
+    body { background-color: white; }
+    #root { height: auto; }
+}
