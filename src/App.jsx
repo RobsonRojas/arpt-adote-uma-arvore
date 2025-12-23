@@ -187,7 +187,7 @@ const processedTrees = rawInventoryData.map(tree => {
     return { ...tree, lat, lng };
 });
 
-// --- COMPONENTES ---
+// --- COMPONENTES VISUAIS ---
 
 const FeaturedTreeCard = ({ tree, onSelect }) => {
     const info = getTreeEncyclopedia(tree.vulgar);
@@ -199,8 +199,17 @@ const FeaturedTreeCard = ({ tree, onSelect }) => {
             background: 'linear-gradient(135deg, #fff 0%, #fffde7 100%)',
             transition: '0.3s', '&:hover': { transform: 'translateY(-5px)', boxShadow: 6 }
         }}>
-            <Box sx={{ position: 'relative', height: 140 }}>
-                <CardMedia component="img" height="140" image={ASSETS.GIF} sx={{ zIndex: 0 }} />
+            <Box sx={{ position: 'relative', height: 450, bgcolor: 'rgba(0,0,0,0.02)' }}>
+                <CardMedia 
+                    component="img" 
+                    height="100%" 
+                    image={ASSETS.GIF} 
+                    sx={{ 
+                        objectFit: 'contain',
+                        width: '100%',
+                        zIndex: 0 
+                    }} 
+                />
                 <Chip label="ALTO RENDIMENTO" color="warning" size="small" sx={{ position: 'absolute', top: 10, left: 10, fontWeight: 'bold', zIndex: 2 }} />
             </Box>
             <CardContent sx={{ pt: 2, pb: 1 }}>
@@ -225,8 +234,17 @@ const TreeGridCard = ({ tree, onSelect, userMode }) => {
                      (userMode === 'partner' && (tree.class === 'Cor' || info.harvest));
     return (
         <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', opacity: isTarget ? 1 : 0.7, borderRadius: 3 }}>
-            <Box sx={{ position: 'relative', height: 140, bgcolor: '#e8f5e9' }}>
-                <CardMedia component="img" height="140" image={ASSETS.GIF} sx={{ zIndex: 0 }} />
+            <Box sx={{ position: 'relative', height: 400, bgcolor: 'rgba(0,0,0,0.02)' }}>
+                <CardMedia 
+                    component="img" 
+                    height="100%" 
+                    image={ASSETS.GIF} 
+                    sx={{ 
+                        objectFit: 'contain',
+                        width: '100%',
+                        zIndex: 0 
+                    }} 
+                />
                 <Chip label={tree.class} size="small" sx={{ position: 'absolute', top: 8, right: 8, bgcolor: color, color: '#fff', zIndex: 2 }} />
             </Box>
             <CardContent sx={{ flexGrow: 1, p: 2 }}>
@@ -413,7 +431,7 @@ const App = () => {
                                 <Typography variant="h5" color={userMode === 'guardian' ? 'primary' : 'secondary'} fontWeight="bold">Perfil Ativo</Typography>
                                 <Divider sx={{ my: 2 }} />
                                 <Typography variant="body2" color="text.secondary">
-                                    {userMode === 'guardian' ? 'Proteja matrizes permanentes e receba certificados digitais.' : 'Financie o manejo sustentável e rentabilize ativos reais.'}
+                                    {userMode === 'guardian' ? 'Proteja matrizes permanentes e receba certificados digitais.' : 'Financie o manejo florestal sustentável e rentabilize ativos reais.'}
                                 </Typography>
                                 {viewMode === 'map' && (
                                     <Box sx={{ mt: 4 }}>
