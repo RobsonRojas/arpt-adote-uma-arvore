@@ -1,19 +1,21 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { 
-  createTheme, ThemeProvider, CssBaseline, AppBar, Toolbar, Typography, 
-  Box, Switch, Paper, Container, Grid, Dialog, 
-  DialogTitle, DialogContent, DialogActions, Button, Slider, Chip, 
-  Alert, Divider, Badge, Card, CardContent, Tabs, Tab,
-  List, ListItem, ListItemText, ListItemAvatar, Avatar,
-  Step, Stepper, StepLabel, StepContent, TextField,
-  ToggleButton, ToggleButtonGroup, FormControlLabel, Checkbox, CardMedia, CardActions, Tooltip,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, LinearProgress
+import {
+    createTheme, ThemeProvider, CssBaseline, AppBar, Toolbar, Typography,
+    Box, Switch, Paper, Container, Grid, Dialog,
+    DialogTitle, DialogContent, DialogActions, Button, Slider, Chip,
+    Alert, Divider, Badge, Card, CardContent, Tabs, Tab,
+    List, ListItem, ListItemText, ListItemAvatar, Avatar,
+    Step, Stepper, StepLabel, StepContent, TextField,
+    ToggleButton, ToggleButtonGroup, FormControlLabel, Checkbox, CardMedia, CardActions, Tooltip,
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import proj4 from 'proj4';
+import { supabase } from './supabaseClient';
+import Auth from './Auth';
 
-// --- CONFIGURAÇÕES E ASSETS ---
+// --- CONFIGURAÇÕES DE ASSETS ---
 const ASSETS = {
     GIF: "/arvore_trocas_gasosas_novo.gif",
     IMAGE: "/image_cb7202.png"
@@ -80,9 +82,9 @@ const croquiPolygon = croquiPointsUTM.map(p => convertUtmToLatLng(p.easting, p.n
 
 const getClassColor = (classificacao) => {
     switch (classificacao) {
-        case 'Rem': return '#2E7D32'; 
-        case 'Cor': return '#D84315'; 
-        default: return '#FBC02D';    
+        case 'Rem': return '#2E7D32';
+        case 'Cor': return '#D84315';
+        default: return '#FBC02D';
     }
 };
 
@@ -113,51 +115,44 @@ const getTreeEncyclopedia = (species) => {
     }
     else if (spec.includes("cumaru")) {
         data.sciName = "Dipteryx odorata";
-        data.techInfo = "O Cumaru (Dipteryx odorata), da família Fabaceae, é reconhecido mundialmente como a 'Baunilha da Amazónia'. Ecologicamente, é uma árvore emergente que desempenha um papel crucial no sequestro de carbono devido à densidade extrema da sua madeira. O potencial de uso é duplo: a madeira é altamente valorizada pela sua dureza, sendo utilizada em construções navais e luxo sustentável. Contudo, o seu maior valor reside na semente, a fava tonka. Esta semente contém cumarina, substância aromática intensamente utilizada na alta perfumaria francesa e na gastronomia de vanguarda para aromatizar doces e bebidas finas. A colheita das favas é uma atividade 100% sustentável. Curiosamente, o Cumaru é ideal para sistemas agroflorestais, pois proporciona sombra e retorno financeiro recorrente através das sementes. O investimento neste ativo garante a preservação de uma espécie que é símbolo de resiliência e fragrância. A biologia do Cumaru permite-lhe suportar longos períodos de seca, tornando-o um pilar de estabilidade climática.";
+        data.techInfo = "O Cumaru (Dipteryx odorata), da família Fabaceae, é reconhecido mundialmente como a 'Baunilha da Amazónia'. Ecologicamente, é uma árvore emergente que desempenha um papel crucial no sequestro de carbono devido à densidade extrema da sua madeira. O potencial de uso é duplo: a madeira é altamente valorizada pela sua dureza, sendo utilizada em construções navais e luxo sustentável. Contudo, o seu maior valor reside na semente, a fava tonka. Esta semente contém cumarina, substância aromática intensamente utilizada na alta perfumaria francesa e na gastronomia de vanguarda para aromatizar doces e bebidas finas. A colheita das favas é uma atividade 100% sustentável. Curiosamente, o Cumaru é ideal para sistemas agroflorestais, pois proporciona sombra e retorno financeiro recorrente através das sementes. O investimento neste ativo garante a preservação de uma espécie que é símbolo de resiliência e fragrância. A biologia do Cumaru permite-lhe suportar longos períodos de seca, tornando-o um pilar de estabilidade climática. Ao financiar esta árvore, o sócio participa diretamente num mercado global de especiarias de luxo.";
         data.harvest = { type: "Sementes", season: "Ago-Out", annualYield: 12, unit: "kg", unitPrice: 135.00 };
         data.prod = { name: "Fava Tonka", icon: "spa" };
     }
     else if (spec.includes("andiroba")) {
         data.sciName = "Carapa guianensis";
-        data.techInfo = "A Andiroba (Carapa guianensis) é frequentemente chamada de 'farmácia da floresta'. Esta árvore de várzea é fundamental na regulação hídrica. Cientificamente, é parente do mogno, possuindo madeira de excelente qualidade e resistente a insetos. O seu potencial de uso deriva principalmente das sementes. Através da prensagem, obtém-se o óleo de andiroba, rico em limonóides com propriedades medicinais: é anti-inflamatório, cicatrizante e repelente natural. Na indústria cosmética, é ingrediente base para produtos capilares e sabonetes premium. A produção de sementes é influenciada pelo regime das marés, tornando a Andiroba um indicador biológico da saúde dos rios. A sua madeira oriunda de manejo é muito procurada para marcenaria fina. Investir numa Andiroba é apoiar a medicina tradicional e a economia ribeirinha. Além do óleo, a árvore oferece abrigo a diversas espécies de peixes durante as cheias.";
+        data.techInfo = "A Andiroba (Carapa guianensis) é frequentemente chamada de 'farmácia da floresta'. Esta árvore de várzea é fundamental na regulação hídrica. Cientificamente, é parente do mogno, possuindo madeira de excelente qualidade e resistente a insetos. O seu potencial de uso deriva principalmente das sementes. Através da prensagem, obtém-se o óleo de andiroba, rico em limonóides com propriedades medicinais: é anti-inflamatório, cicatrizante e repelente natural. Na indústria cosmética, é ingrediente base para produtos capilares e sabonetes premium. A produção de sementes é influenciada pelo regime das marés, tornando a Andiroba um indicador biológico da saúde dos rios. A sua madeira oriunda de manejo é muito procurada para marcenaria fina. Investir numa Andiroba é apoiar a medicina tradicional e a economia ribeirinha. Além do óleo, a árvore oferece abrigo a diversas espécies de peixes durante as cheias. O seu tronco reto e imponente é um símbolo da arquitetura natural da floresta. O monitoramento contínuo deste indivíduo assegura que as propriedades terapêuticas da Amazónia permaneçam acessíveis de forma ética e controlada.";
         data.harvest = { type: "Óleo", season: "Mar-Mai", annualYield: 8, unit: "litros", unitPrice: 85.00 };
         data.prod = { name: "Óleo de Andiroba", icon: "sanitizer" };
     }
     else if (spec.includes("cedrinho")) {
         data.sciName = "Erisma uncinatum";
-        data.techInfo = "O Cedrinho (Erisma uncinatum) é uma das espécies mais importantes para o manejo florestal sustentável. Ecologicamente, contribui para a estrutura do dossel superior e oferece locais de nidificação para aves tropicais. A sua madeira possui um tom rosado apreciado pela leveza e resistência mecânica. O potencial de uso abrange desde a construção civil leve até mobiliário e painéis decorativos. No manejo, o Cedrinho é uma espécie chave devido à sua excelente capacidade de regeneração natural em clareiras. Embora não produza frutos para consumo humano, a sua floração atrai polinizadores que beneficiam todo o ecossistema. Para o investidor, o Cedrinho representa um ativo de crescimento previsível. Adotar um espécime no modo Sócio financia uma cadeia produtiva que substitui materiais sintéticos por recursos renováveis.";
+        data.techInfo = "O Cedrinho (Erisma uncinatum) é uma das espécies mais importantes para o manejo florestal sustentável. Ecologicamente, contribui para a estrutura do dossel superior e oferece locais de nidificação para aves tropicais. A sua madeira possui um tom rosado apreciado pela leveza e resistência mecânica. O potencial de uso abrange desde a construção civil leve até mobiliário e painéis decorativos. No manejo, o Cedrinho é uma espécie chave devido à sua excelente capacidade de regeneração natural em clareiras. Embora não produza frutos para consumo humano, a sua floração atrai polinizadores que beneficiam todo o ecossistema. Para o investidor, o Cedrinho representa um ativo de crescimento previsível. Adotar um espécime no modo Sócio financia uma cadeia produtiva que substitui materiais sintéticos por recursos renováveis. O manejo controlado garante que a árvore só seja removida quando atingir a maturidade ideal, permitindo que novos indivíduos ocupem o seu lugar, mantendo a floresta funcional. É o exemplo perfeito de economia circular aplicada à conservação florestal moderna.";
         data.prod = { name: "Tábua de Corte", icon: "kitchen" };
     }
     else if (spec.includes("sapucaia")) {
         data.sciName = "Lecythis pisonis";
-        data.techInfo = "A Sapucaia (Lecythis pisonis) é famosa pela sua mudança cromática anual, onde as folhas novas surgem em tons de lilás. Ecologicamente, sustenta polinizadores especializados e dispersores como macacos. O seu fruto é um pixídio lenhoso que possui uma 'tampa' que se solta ao amadurecer. O potencial de uso é vasto: as sementes (castanhas de sapucaia) são consideradas superiores em sabor à castanha-do-pará, sendo ricas em óleos essenciais. Contudo, a dificuldade de colheita as torna um produto de luxo. A madeira é extremamente durável, usada em construções pesadas. Curiosamente, as urnas vazias são usadas tradicionalmente como recipientes rústicos. É uma espécie que combina alto valor estético e botânico. Adotar uma Sapucaia é valorizar a raridade amazónica. A sua floração intensa é um evento biológico que marca as estações na floresta densa.";
+        data.techInfo = "A Sapucaia (Lecythis pisonis) é famosa pela sua mudança cromática anual, onde as folhas novas surgem em tons de lilás. Ecologicamente, sustenta polinizadores especializados e dispersores como macacos. O seu fruto é um pixídio lenhoso que possui uma 'tampa' que se solta ao amadurecer. O potencial de uso é vasto: as sementes (castanhas de sapucaia) são consideradas superiores em sabor à castanha-do-pará, sendo ricas em óleos essenciais. Contudo, a dificuldade de colheita as torna um produto de luxo. A madeira é extremamente durável, usada em construções pesadas. Curiosamente, as urnas vazias são usadas tradicionalmente como recipientes rústicos. É uma espécie que combina alto valor estético e botânico. Adotar uma Sapucaia é valorizar a raridade amazónica. A sua floração intensa é um evento biológico que marca as estações na floresta densa. O seu monitoramento ajuda a mapear os ciclos reprodutivos da região de Rio Preto da Eva. É um ativo que representa a complexidade e a beleza da bioeconomia de nicho.";
         data.harvest = { type: "Castanha", season: "Set-Nov", annualYield: 45, unit: "kg", unitPrice: 42.00 };
         data.prod = { name: "Castanha de Sapucaia", icon: "park" };
     }
     return data;
 };
 
-// GAMIFICAÇÃO
-const getImpactLevel = (xp) => {
-    if (xp < 500) return { title: "Semente", icon: "grass", next: 500, color: "#81c784" };
-    if (xp < 2000) return { title: "Brotar", icon: "park", next: 2000, color: "#4caf50" };
-    return { title: "Dossel", icon: "forest", next: 5000, color: "#1b5e20" };
-};
-
-const getHumanizedMonitoringData = (tree) => {
+const getMonitoringData = (tree) => {
     if (tree.class === 'Rem' || tree.class === 'Fut') {
         return [
-            { label: 'Nova Casa Mapeada', date: '10/01/2025', status: 'completed', desc: 'As minhas coordenadas foram registadas! Sou um ativo digital seguro.' },
-            { label: 'Exame de Saúde', date: '15/01/2025', status: 'completed', desc: 'Os técnicos mediram-me e estou em plena forma.' },
-            { label: 'Eco-Diário: Florada', date: '20/09/2025', status: 'active', desc: 'Sinto o sol! As minhas flores estão a atrair polinizadores hoje.' },
-            { label: 'Auditoria de Paz', date: 'Em breve', status: 'pending', desc: 'Verificação de integridade anual.' }
+            { label: 'Georreferenciamento', date: '10/01/2025', status: 'completed', desc: 'Localização confirmada via GPS de precisão.' },
+            { label: 'Censo Florestal', date: '15/01/2025', status: 'completed', desc: 'Registo no sistema Manejar.' },
+            { label: 'Vistoria de Florada', date: '20/09/2025', status: 'active', desc: 'Ciclo reprodutivo observado em campo.' },
+            { label: 'Auditoria Externa', date: 'Em breve', status: 'pending', desc: 'Verificação anual.' }
         ];
     } else {
         return [
-            { label: 'Plano de Futuro', date: '05/01/2025', status: 'completed', desc: 'A minha contribuição económica foi autorizada.' },
-            { label: 'Corte Ético', date: '12/02/2025', status: 'completed', desc: 'Iniciei a minha transformação sustentável.' },
-            { label: 'Oficina de Arte', date: '25/03/2025', status: 'active', desc: 'Estou a ser trabalhada por mãos artesãs locais.' },
-            { label: 'Viagem Definida', date: 'Estimado 05/2025', status: 'pending', desc: 'Em breve estarei no transporte para a minha nova morada.' }
+            { label: 'Autorização de Corte', date: '05/01/2025', status: 'completed', desc: 'Aprovado pelo plano de manejo sustentável.' },
+            { label: 'Corte Direcional', date: '12/02/2025', status: 'completed', desc: 'Executado com técnicas de baixo impacto.' },
+            { label: 'Serraria e Manufatura', date: '25/03/2025', status: 'active', desc: 'Processamento artesanal da peça.' },
+            { label: 'Logística de Envio', date: 'Estimado 05/2025', status: 'pending', desc: 'Saída para entrega.' }
         ];
     }
 };
@@ -175,7 +170,7 @@ const getProductForecast = (tree, quotas) => {
         items.push({ name: `Quota: ${info.prod.name}`, quantity: shareFormatted, icon: "eco" });
         estimatedDelivery = `${info.harvest.season} ${year + 1}`;
     } else {
-        const mainQty = Math.floor(quotas / 200); 
+        const mainQty = Math.floor(quotas / 200);
         items.push({ name: info.prod.name, quantity: mainQty || 1, icon: info.prod.icon });
         estimatedDelivery = "Maio 2025";
     }
@@ -194,25 +189,20 @@ const processedTrees = rawInventoryData.map(tree => {
     return { ...tree, lat, lng };
 });
 
-// --- COMPONENTES VISUAIS ---
+// --- COMPONENTES ---
 
 const FeaturedTreeCard = ({ tree, onSelect }) => {
     const info = getTreeEncyclopedia(tree.vulgar);
     const potentialValue = info.harvest ? (info.harvest.annualYield * info.harvest.unitPrice).toFixed(2) : "99.00";
     return (
-        <Card sx={{ 
-            height: '100%', border: '2px solid #FFC107', borderRadius: 4, 
+        <Card sx={{
+            height: '100%', border: '2px solid #FFC107', borderRadius: 4,
             position: 'relative', overflow: 'hidden',
             background: 'linear-gradient(135deg, #fff 0%, #fffde7 100%)',
             transition: '0.3s', '&:hover': { transform: 'translateY(-5px)', boxShadow: 6 }
         }}>
-            <Box sx={{ position: 'relative', height: 450, bgcolor: 'rgba(0,0,0,0.02)' }}>
-                <CardMedia 
-                    component="img" 
-                    height="100%" 
-                    image={ASSETS.GIF} 
-                    sx={{ objectFit: 'contain', width: '100%', zIndex: 0 }} 
-                />
+            <Box sx={{ position: 'relative', height: 140 }}>
+                <CardMedia component="img" height="140" image={ASSETS.GIF} sx={{ zIndex: 0 }} />
                 <Chip label="ALTO RENDIMENTO" color="warning" size="small" sx={{ position: 'absolute', top: 10, left: 10, fontWeight: 'bold', zIndex: 2 }} />
             </Box>
             <CardContent sx={{ pt: 2, pb: 1 }}>
@@ -233,25 +223,20 @@ const FeaturedTreeCard = ({ tree, onSelect }) => {
 const TreeGridCard = ({ tree, onSelect, userMode }) => {
     const color = getClassColor(tree.class);
     const info = getTreeEncyclopedia(tree.vulgar);
-    const isTarget = (userMode === 'guardian' && (tree.class === 'Rem' || tree.class === 'Fut')) || 
-                     (userMode === 'partner' && (tree.class === 'Cor' || info.harvest));
+    const isTarget = (userMode === 'guardian' && (tree.class === 'Rem' || tree.class === 'Fut')) ||
+        (userMode === 'partner' && (tree.class === 'Cor' || info.harvest));
     return (
         <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', opacity: isTarget ? 1 : 0.7, borderRadius: 3 }}>
-            <Box sx={{ position: 'relative', height: 400, bgcolor: 'rgba(0,0,0,0.02)' }}>
-                <CardMedia 
-                    component="img" 
-                    height="100%" 
-                    image={ASSETS.GIF} 
-                    sx={{ objectFit: 'contain', width: '100%', zIndex: 0 }} 
-                />
+            <Box sx={{ position: 'relative', height: 140, bgcolor: '#e8f5e9' }}>
+                <CardMedia component="img" height="140" image={ASSETS.GIF} sx={{ zIndex: 0 }} />
                 <Chip label={tree.class} size="small" sx={{ position: 'absolute', top: 8, right: 8, bgcolor: color, color: '#fff', zIndex: 2 }} />
             </Box>
             <CardContent sx={{ flexGrow: 1, p: 2 }}>
                 <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{tree.vulgar}</Typography>
                 <Box sx={{ display: 'flex', gap: 0.5, my: 1 }}>
-                    <Tooltip title="Oxigénio"><Chip label="O2" size="small" variant="outlined" color="primary" sx={{height:20, fontSize:10}} /></Tooltip>
-                    <Tooltip title="Vapor de Água"><Chip label="H2O" size="small" variant="outlined" color="info" sx={{height:20, fontSize:10}} /></Tooltip>
-                    <Tooltip title="Absorção CO2"><Chip label="CO2" size="small" variant="outlined" color="success" sx={{height:20, fontSize:10}} /></Tooltip>
+                    <Tooltip title="Oxigénio"><Chip label="O2" size="small" variant="outlined" color="primary" sx={{ height: 20, fontSize: 10 }} /></Tooltip>
+                    <Tooltip title="Vapor de Água"><Chip label="H2O" size="small" variant="outlined" color="info" sx={{ height: 20, fontSize: 10 }} /></Tooltip>
+                    <Tooltip title="Absorção CO2"><Chip label="CO2" size="small" variant="outlined" color="success" sx={{ height: 20, fontSize: 10 }} /></Tooltip>
                 </Box>
                 <Typography variant="caption" color="text.secondary" display="block">{info.char.substring(0, 50)}...</Typography>
             </CardContent>
@@ -267,7 +252,7 @@ const MapComponent = ({ trees, onSelectTree, userMode, showCroqui }) => {
     const croquiLayer = useRef(null);
     useEffect(() => {
         if (!mapRef.current) {
-            const center = trees[0] ? [trees[0].lat, trees[0].lng] : [0,0];
+            const center = trees[0] ? [trees[0].lat, trees[0].lng] : [0, 0];
             const map = L.map('map-container').setView(center, 17);
             L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png').addTo(map);
@@ -291,65 +276,33 @@ const MapComponent = ({ trees, onSelectTree, userMode, showCroqui }) => {
     return <div id="map-container" style={{ height: '100%', width: '100%' }}></div>;
 };
 
-// --- 4. PAINEL DO USUÁRIO ---
-
 const UserDashboard = ({ adoptedTrees, onBack }) => {
     const [tabIndex, setTabIndex] = useState(0);
     const productTrees = adoptedTrees.filter(t => t.mode === 'partner' && t.quotas >= 200);
-    const totalXP = adoptedTrees.reduce((acc, t) => acc + 100 + t.quotas, 0);
-    const level = getImpactLevel(totalXP);
-    const progress = (totalXP / level.next) * 100;
-
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            <Button startIcon={<span className="material-icons">arrow_back</span>} onClick={onBack} sx={{mb:2}} className="no-print">Voltar</Button>
-            
-            <Paper sx={{ p: 3, mb: 4, borderRadius: 4, background: 'linear-gradient(90deg, #f1f8e9 0%, #ffffff 100%)', border: '1px solid #c8e6c9' }}>
-                <Grid container spacing={3} alignItems="center">
-                    <Grid item xs={12} md={2} sx={{ textAlign: 'center' }}>
-                        <Avatar sx={{ width: 80, height: 80, bgcolor: level.color, margin: '0 auto', border: '4px solid #fff', boxShadow: 3 }}>
-                            <span className="material-icons" style={{ fontSize: 40 }}>{level.icon}</span>
-                        </Avatar>
-                        <Typography variant="h6" fontWeight="bold" sx={{ mt: 1, color: level.color }}>{level.title}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={7}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                            <Typography variant="body2" fontWeight="bold">Nível de Impacto</Typography>
-                            <Typography variant="body2" color="text.secondary">{totalXP} / {level.next} XP</Typography>
-                        </Box>
-                        <LinearProgress variant="determinate" value={progress} sx={{ height: 12, borderRadius: 5, bgcolor: '#e0e0e0', '& .MuiLinearProgress-bar': { bgcolor: level.color } }} />
-                    </Grid>
-                    <Grid item xs={12} md={3} sx={{ textAlign: 'right' }}>
-                        <Chip icon={<span className="material-icons">stars</span>} label={`${totalXP} Bio-Points`} color="success" variant="outlined" />
-                    </Grid>
-                </Grid>
-            </Paper>
-
+            <Button startIcon={<span className="material-icons">arrow_back</span>} onClick={onBack} sx={{ mb: 2 }} className="no-print">Voltar</Button>
+            <Typography variant="h4" gutterBottom fontWeight="bold">Painel do Adotante</Typography>
             <Paper sx={{ width: '100%', mb: 2 }} className="no-print">
-                <Tabs value={tabIndex} onChange={(e, v) => setTabIndex(v)} centered>
-                    <Tab label="Eco-Diário" icon={<span className="material-icons">history_edu</span>} iconPosition="start"/>
-                    <Tab label="Extrato ESG" icon={<span className="material-icons">assessment</span>} iconPosition="start"/>
-                    <Tab label="Ativos" icon={<span className="material-icons">inventory_2</span>} iconPosition="start"/>
+                <Tabs value={tabIndex} onChange={(e, v) => setTabIndex(v)} indicatorColor="primary" textColor="primary" centered>
+                    <Tab label="Monitoramento" icon={<span className="material-icons">visibility</span>} iconPosition="start" />
+                    <Tab label="Relatórios" icon={<span className="material-icons">assessment</span>} iconPosition="start" />
+                    <Tab label="Meus Produtos" icon={<span className="material-icons">inventory_2</span>} iconPosition="start" />
                 </Tabs>
             </Paper>
-
             {tabIndex === 0 && (
                 <Grid container spacing={3}>
-                    {adoptedTrees.length === 0 ? <Grid item xs={12}><Alert severity="info">Ainda não realizou nenhuma adoção.</Alert></Grid> : 
+                    {adoptedTrees.length === 0 ? <Grid item xs={12}><Alert severity="info">Ainda não realizou nenhuma adoção.</Alert></Grid> :
                         adoptedTrees.map((tree, idx) => (
                             <Grid item xs={12} md={6} key={idx}>
                                 <Card elevation={3} sx={{ borderRadius: 4 }}>
                                     <CardContent>
-                                        <Typography variant="h6" color={getClassColor(tree.class)} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <span className="material-icons">auto_stories</span> {tree.vulgar} (#{tree.arvNum})
-                                        </Typography>
-                                        <Stepper orientation="vertical" activeStep={2} sx={{ mt: 2 }}>
-                                            {getHumanizedMonitoringData(tree).map((step) => (
+                                        <Typography variant="h6" color={getClassColor(tree.class)}>{tree.vulgar} (#{tree.arvNum})</Typography>
+                                        <Stepper orientation="vertical" activeStep={1} sx={{ mt: 2 }}>
+                                            {getMonitoringData(tree).map((step) => (
                                                 <Step key={step.label} active={step.status === 'active'} completed={step.status === 'completed'}>
-                                                    <StepLabel optional={<Typography variant="caption">{step.date}</Typography>}>
-                                                        <Typography variant="body2" fontWeight="bold">{step.label}</Typography>
-                                                    </StepLabel>
-                                                    <StepContent><Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>"{step.desc}"</Typography></StepContent>
+                                                    <StepLabel optional={<Typography variant="caption">{step.date}</Typography>}>{step.label}</StepLabel>
+                                                    <StepContent><Typography variant="body2">{step.desc}</Typography></StepContent>
                                                 </Step>
                                             ))}
                                         </Stepper>
@@ -360,12 +313,11 @@ const UserDashboard = ({ adoptedTrees, onBack }) => {
                     }
                 </Grid>
             )}
-
             {tabIndex === 1 && (
                 <Paper sx={{ p: 4, borderRadius: 4 }}>
-                    <Typography variant="h5" gutterBottom fontWeight="bold">Extrato de Impacto</Typography>
+                    <Typography variant="h5" gutterBottom>Extrato de Impacto</Typography>
                     <TableContainer>
-                        <Table size="small">
+                        <Table>
                             <TableHead><TableRow><TableCell>Árvore</TableCell><TableCell>ID</TableCell><TableCell>Cotas</TableCell><TableCell>Investimento</TableCell></TableRow></TableHead>
                             <TableBody>
                                 {adoptedTrees.map((t, i) => (
@@ -376,15 +328,14 @@ const UserDashboard = ({ adoptedTrees, onBack }) => {
                     </TableContainer>
                 </Paper>
             )}
-
             {tabIndex === 2 && (
                 <Box>
-                    {productTrees.length === 0 ? <Alert severity="info">Não existem ativos físicos pendentes.</Alert> : 
+                    {productTrees.length === 0 ? <Alert severity="info">Não existem produtos para as suas adoções atuais.</Alert> :
                         productTrees.map((tree, idx) => (
                             <Card key={idx} sx={{ mb: 2, borderRadius: 4 }}>
                                 <CardContent>
                                     <Typography variant="h6">{tree.vulgar}</Typography>
-                                    <Typography variant="body2">Previsão: {getProductForecast(tree, tree.quotas).estimatedDelivery}</Typography>
+                                    <Typography variant="body2">Entrega estimada: {getProductForecast(tree, tree.quotas).estimatedDelivery}</Typography>
                                 </CardContent>
                             </Card>
                         ))
@@ -396,12 +347,54 @@ const UserDashboard = ({ adoptedTrees, onBack }) => {
 };
 
 const App = () => {
-    const [currentView, setCurrentView] = useState('explore'); 
-    const [viewMode, setViewMode] = useState('grid'); 
+    const [currentView, setCurrentView] = useState('explore');
+    const [viewMode, setViewMode] = useState('grid');
     const [userMode, setUserMode] = useState('guardian');
     const [selectedTree, setSelectedTree] = useState(null);
     const [showCroqui, setShowCroqui] = useState(false);
     const [adoptedTrees, setAdoptedTrees] = useState([]);
+    const [user, setUser] = useState(null);
+    const [authOpen, setAuthOpen] = useState(false);
+
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setUser(session?.user ?? null);
+            if (session?.user) fetchAdoptedTrees(session.user.id);
+        });
+
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+            setUser(session?.user ?? null);
+            if (session?.user) {
+                fetchAdoptedTrees(session.user.id);
+            } else {
+                setAdoptedTrees([]);
+            }
+        });
+
+        return () => {
+            authListener.subscription?.unsubscribe();
+        };
+    }, []);
+
+    const fetchAdoptedTrees = async (userId) => {
+        try {
+            const { data, error } = await supabase
+                .from('adocoes')
+                .select('*')
+                .eq('user_id', userId);
+
+            if (error) throw error;
+            if (data) {
+                setAdoptedTrees(data.map(d => d.tree_data));
+            }
+        } catch (error) {
+            console.error('Erro ao buscar adoções:', error);
+        }
+    };
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+    };
 
     const featuredTrees = useMemo(() => processedTrees
         .filter(t => !!getTreeEncyclopedia(t.vulgar).harvest)
@@ -412,11 +405,34 @@ const App = () => {
         })
         .slice(0, 3), []);
 
-    const handleConfirmAdoption = (tree, quotas, invested) => {
+    const handleConfirmAdoption = async (tree, quotas, invested) => {
+        if (!user) {
+            setAuthOpen(true);
+            return;
+        }
+
         const newAdoption = { ...tree, quotas, invested, mode: userMode, date: new Date().toLocaleDateString('pt-PT') };
-        setAdoptedTrees([...adoptedTrees, newAdoption]);
-        setSelectedTree(null);
-        alert(`Parabéns! Ganhou ${100 + quotas} XP!`);
+
+        try {
+            const { error } = await supabase.from('adocoes').insert({
+                user_id: user.id,
+                tree_id: tree.id,
+                quotas,
+                invested,
+                mode: userMode,
+                date: newAdoption.date,
+                tree_data: newAdoption
+            });
+
+            if (error) throw error;
+
+            setAdoptedTrees([...adoptedTrees, newAdoption]);
+            setSelectedTree(null);
+            alert("Sucesso! Adoção registada.");
+        } catch (error) {
+            console.error('Erro ao registrar adoção:', error);
+            alert("Erro ao registrar adoção.");
+        }
     };
 
     const theme = createTheme({
@@ -431,10 +447,20 @@ const App = () => {
                     <span className="material-icons" style={{ marginRight: 10 }}>park</span>
                     <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 'bold' }}>ARPT | Adote</Typography>
                     <Box sx={{ mr: 2 }}>
-                        <Button color="inherit" onClick={() => setCurrentView('explore')} sx={{ fontWeight: currentView==='explore'?'bold':'normal' }}>Explorar</Button>
-                        <Button color="inherit" onClick={() => setCurrentView('dashboard')} sx={{ fontWeight: currentView==='dashboard'?'bold':'normal' }}>
-                            <Badge badgeContent={adoptedTrees.length} color="error">Painel&nbsp;</Badge>
+                        <Button color="inherit" onClick={() => setCurrentView('explore')} sx={{ fontWeight: currentView === 'explore' ? 'bold' : 'normal' }}>Explorar</Button>
+                        <Button color="inherit" onClick={() => setCurrentView('dashboard')} sx={{ fontWeight: currentView === 'dashboard' ? 'bold' : 'normal' }}>
+                            <Badge badgeContent={adoptedTrees.length} color="error">Meu Painel&nbsp;</Badge>
                         </Button>
+                    </Box>
+                    <Box sx={{ mr: 2, display: 'flex', alignItems: 'center' }}>
+                        {user ? (
+                            <>
+                                <Typography variant="body2" sx={{ mr: 2 }}>{user.email.split('@')[0]}</Typography>
+                                <Button color="inherit" onClick={handleLogout} size="small" variant="outlined">Sair</Button>
+                            </>
+                        ) : (
+                            <Button color="inherit" onClick={() => setAuthOpen(true)} variant="outlined">Entrar</Button>
+                        )}
                     </Box>
                     <Paper sx={{ px: 2, py: 0.5, borderRadius: 5, display: 'flex', alignItems: 'center' }}>
                         <Typography variant="caption" sx={{ mr: 1, fontWeight: 'bold' }}>{userMode === 'guardian' ? "GUARDIÃO" : "SÓCIO"}</Typography>
@@ -464,7 +490,7 @@ const App = () => {
                                 <Typography variant="h5" color={userMode === 'guardian' ? 'primary' : 'secondary'} fontWeight="bold">Perfil Ativo</Typography>
                                 <Divider sx={{ my: 2 }} />
                                 <Typography variant="body2" color="text.secondary">
-                                    {userMode === 'guardian' ? 'Proteja matrizes permanentes e ajude a floresta a atingir o nível dossel.' : 'Financie o manejo ético e rentabilize ativos reais na Amazónia.'}
+                                    {userMode === 'guardian' ? 'Proteja matrizes permanentes e receba certificados digitais.' : 'Financie o manejo sustentável e rentabilize ativos reais.'}
                                 </Typography>
                                 {viewMode === 'map' && (
                                     <Box sx={{ mt: 4 }}>
@@ -504,13 +530,14 @@ const App = () => {
                 <UserDashboard adoptedTrees={adoptedTrees} onBack={() => setCurrentView('explore')} />
             )}
             <TreeAdoptionModal tree={selectedTree} open={!!selectedTree} onClose={() => setSelectedTree(null)} userMode={userMode} onConfirmAdoption={handleConfirmAdoption} />
+            <Auth open={authOpen} onClose={() => setAuthOpen(false)} />
         </ThemeProvider>
     );
 };
 
 const TreeAdoptionModal = ({ tree, open, onClose, userMode, onConfirmAdoption }) => {
-    const [quotas, setQuotas] = React.useState(10);
-    const [tabValue, setTabValue] = React.useState(0);
+    const [quotas, setQuotas] = useState(10);
+    const [tabValue, setTabValue] = useState(0);
     const PRICE_PER_QUOTA = 9.99;
     if (!tree) return null;
     const info = getTreeEncyclopedia(tree.vulgar);
@@ -521,21 +548,21 @@ const TreeAdoptionModal = ({ tree, open, onClose, userMode, onConfirmAdoption })
     else if (!isGuardian && tree.class === 'Rem') { canAdopt = false; warning = "Esta é uma árvore matriz protegida."; }
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-            <DialogTitle sx={{display:'flex', alignItems:'center', gap:1, bgcolor: getClassColor(tree.class), color:'#fff'}}>
+        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: getClassColor(tree.class), color: '#fff' }}>
                 <span className="material-icons">park</span> {tree.vulgar} (#{tree.arvNum})
             </DialogTitle>
-            <DialogContent sx={{pt: 2}}>
-                <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} variant="fullWidth" sx={{mb:2}}>
+            <DialogContent sx={{ pt: 2 }}>
+                <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} variant="fullWidth" sx={{ mb: 2 }}>
                     <Tab label="Adoção" /><Tab label="Info Técnica" />
                 </Tabs>
                 {tabValue === 0 && (
-                    <Box sx={{mt:1}}>
+                    <Box sx={{ mt: 1 }}>
                         {!canAdopt ? <Alert severity="warning">{warning}</Alert> : (
                             <Box>
-                                <Typography gutterBottom sx={{fontWeight:'bold'}}>Quantas cotas?</Typography>
-                                <Slider value={quotas} onChange={(e,v) => setQuotas(v)} min={1} max={1000} step={10} valueLabelDisplay="auto" color={isGuardian ? "primary" : "secondary"} />
-                                <Paper sx={{p:2, mt:2, textAlign:'center', bgcolor:'#f5f5f5', border:'1px solid #ddd'}}>
+                                <Typography gutterBottom sx={{ fontWeight: 'bold' }}>Quantas cotas?</Typography>
+                                <Slider value={quotas} onChange={(e, v) => setQuotas(v)} min={1} max={1000} step={10} valueLabelDisplay="auto" color={isGuardian ? "primary" : "secondary"} />
+                                <Paper sx={{ p: 2, mt: 2, textAlign: 'center', bgcolor: '#f5f5f5' }}>
                                     <Typography variant="h4" color={isGuardian ? "primary" : "secondary"} fontWeight="bold">R$ {(quotas * PRICE_PER_QUOTA).toFixed(2)}</Typography>
                                     <Typography variant="caption">Total do Investimento</Typography>
                                 </Paper>
@@ -544,15 +571,15 @@ const TreeAdoptionModal = ({ tree, open, onClose, userMode, onConfirmAdoption })
                     </Box>
                 )}
                 {tabValue === 1 && (
-                    <Box sx={{mt:1}}>
+                    <Box sx={{ mt: 1 }}>
                         <Typography variant="subtitle2" color="primary" fontWeight="bold" gutterBottom>{info.sciName}</Typography>
-                        <Typography variant="body2" sx={{ textAlign: 'justify', lineHeight: 1.6, color: 'text.primary' }}>{info.techInfo}</Typography>
+                        <Typography variant="body2" sx={{ textAlign: 'justify', lineHeight: 1.6 }}>{info.techInfo}</Typography>
                         <Divider sx={{ my: 2 }} />
                         <Typography variant="caption" color="text.secondary">📍 Coordenadas: {tree.lat.toFixed(6)}, {tree.lng.toFixed(6)}</Typography>
                     </Box>
                 )}
             </DialogContent>
-            <DialogActions sx={{p:3}}>
+            <DialogActions sx={{ p: 3 }}>
                 <Button onClick={onClose}>Fechar</Button>
                 <Button variant="contained" disabled={!canAdopt || tabValue === 1} color={isGuardian ? "primary" : "secondary"} onClick={() => onConfirmAdoption(tree, quotas, quotas * PRICE_PER_QUOTA)}>Confirmar</Button>
             </DialogActions>
