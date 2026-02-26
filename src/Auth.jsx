@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { supabase } from './supabaseClient';
+import { auth } from './firebase/config';
+import {
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signInWithPopup,
+    GoogleAuthProvider
+} from 'firebase/auth';
 import {
     Dialog, DialogTitle, DialogContent, TextField, Button,
     Typography, Box, Alert, Divider, IconButton
@@ -21,38 +27,42 @@ export default function Auth({ open, onClose, onLoginSuccess }) {
 
         try {
             if (isLogin) {
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email,
-                    password,
-                });
-                if (error) throw error;
-                if (onLoginSuccess && data.user) onLoginSuccess(data.user);
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                if (onLoginSuccess && userCredential.user) onLoginSuccess(userCredential.user);
                 onClose();
             } else {
-                const { data, error } = await supabase.auth.signUp({
-                    email,
-                    password,
-                });
-                if (error) throw error;
-                // Supabase sends a confirmation email by default unless disabled
-                alert('Verifique seu e-mail para o link de confirmação!');
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                alert('Conta criada com sucesso!');
+                if (onLoginSuccess && userCredential.user) onLoginSuccess(userCredential.user);
+                onClose();
             }
         } catch (err) {
-            setError(err.message || 'Erro de autenticação');
+            let message = 'Erro de autenticação';
+            if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+                message = 'E-mail ou senha inválidos';
+            } else if (err.code === 'auth/email-already-in-use') {
+                message = 'Este e-mail já está em uso';
+            } else if (err.code === 'auth/weak-password') {
+                message = 'A senha deve ter pelo menos 6 caracteres';
+            }
+            setError(message);
         } finally {
             setLoading(false);
         }
     };
 
     const handleGoogleLogin = async () => {
+        setLoading(true);
+        setError(null);
+        const provider = new GoogleAuthProvider();
         try {
-            const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                // options: { redirectTo: window.location.origin } // Opcional
-            });
-            if (error) throw error;
+            const result = await signInWithPopup(auth, provider);
+            if (onLoginSuccess && result.user) onLoginSuccess(result.user);
+            onClose();
         } catch (err) {
             setError(err.message || 'Erro ao logar com Google');
+        } finally {
+            setLoading(true);
         }
     };
 
