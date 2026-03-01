@@ -103,7 +103,7 @@ const AppContent = () => {
     const handleConfirmAdoption = async (tree, quotas, invested) => {
         if (!user) {
             setAuthOpen(true);
-            return;
+            return false;
         }
 
         const newAdoption = { ...tree, quotas, invested, mode: userMode, date: new Date().toLocaleDateString('pt-PT') };
@@ -122,11 +122,12 @@ const AppContent = () => {
             if (error) throw error;
 
             setAdoptedTrees([...adoptedTrees, newAdoption]);
-            setSelectedTree(null);
-            alert("Sucesso! Adoção registada.");
+            // setSelectedTree(null); // Don't close immediately, let the modal show success
+            return true;
         } catch (error) {
             console.error('Erro ao registrar adoção:', error);
             alert("Erro ao registrar adoção.");
+            return false;
         }
     };
 

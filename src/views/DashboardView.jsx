@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Container, Typography, Paper, Tabs, Tab, Grid, Card, CardContent, Stepper, Step, StepLabel, StepContent, Alert, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Box } from '@mui/material';
+import { Container, Typography, Paper, Tabs, Tab, Grid, Card, CardContent, Stepper, Step, StepLabel, StepContent, Alert, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Box, Button, Stack } from '@mui/material';
+import { Share, WhatsApp, Twitter, LinkedIn } from '@mui/icons-material';
 import { getClassColor, getMonitoringData, getProductForecast } from '../utils/treeUtils';
 
 const DashboardView = ({ adoptedTrees }) => {
@@ -23,7 +23,21 @@ const DashboardView = ({ adoptedTrees }) => {
                             <Grid item xs={12} md={6} key={idx}>
                                 <Card elevation={3} sx={{ borderRadius: 4 }}>
                                     <CardContent>
-                                        <Typography variant="h6" color={getClassColor(tree.class)}>{tree.vulgar} (#{tree.arvNum})</Typography>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                            <Typography variant="h6" color={getClassColor(tree.class)}>{tree.vulgar} (#{tree.arvNum})</Typography>
+                                            <Button
+                                                size="small"
+                                                startIcon={<Share />}
+                                                onClick={() => {
+                                                    const shareText = `Estou monitorando minha árvore ${tree.vulgar} na Amazônia! 🌳✨ Veja como ela está crescendo e ajude a proteger a biodiversidade. #ARPT #Amazonia`;
+                                                    const shareUrl = window.location.origin;
+                                                    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+                                                    window.open(whatsappUrl, '_blank');
+                                                }}
+                                            >
+                                                Compartilhar
+                                            </Button>
+                                        </Box>
                                         <Stepper orientation="vertical" activeStep={1} sx={{ mt: 2 }}>
                                             {getMonitoringData(tree).map((step) => (
                                                 <Step key={step.label} active={step.status === 'active'} completed={step.status === 'completed'}>
